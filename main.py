@@ -1,23 +1,46 @@
+import json
+
+
 class Manager:
-    def __int__(self):
+    def __int__(self, warehouse):
+        self.warehouse = warehouse
         self.tasks = {}
-    def assign(self):
+
+    def assign(self, task, method):
+        self.tasks[task] = method
+
         def wrapper(func):
             self.tasks[product_name] = func
         return wrapper
 
-    def execute(self, task, *args):
-        return self.tasks[task](self,*args)
+    def execute(self, task, method, *args, **kwargs):
+        if task in self.tasks:
+            method = self.tasks[task]
+        return method(*args, **kwargs)
 
+    def purchase_decorator(self, function):
+        def wrapper(*args, **kwargs):
+            result = function(*args, **kwargs)
+            return result
+        return wrapper
 
-    def purchase_decorator(self):
+    def balance_decorator(self, function):
+        def wrapper(*args, **kwargs):
+            result = function(*args, **kwargs)
+            return result
+        return wrapper
 
+    def sale_decorator(self, function):
+        def wrapper(*args, **kwargs):
+            result = function(*args, **kwargs)
+            return result
+        return wrapper
 
-    def balance_decorator(self):
-
-
-    def sale_decorator(self):
-
+    def review(self, function):
+        def wrapper(*args, **kwargs):
+            result = function(*args, **kwargs)
+            return result
+        return wrapper
 
 
 balance = 0
