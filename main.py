@@ -1,51 +1,176 @@
 import json
+import os.path
 
 
 class Manager:
-    def __int__(self, warehouse):
-        self.warehouse = warehouse
-        self.tasks = {}
+    def __init__(self):
+        self.actions = {}
 
-    def assign(self, task, method):
-        self.tasks[task] = method
-
+    def assign(self, name):
         def wrapper(func):
-            self.tasks[product_name] = func
+            self.actions[name] = func
+
         return wrapper
 
-    def execute(self, task, method, *args, **kwargs):
-        if task in self.tasks:
-            method = self.tasks[task]
-        return method(*args, **kwargs)
-
-    def purchase_decorator(self, function):
-        def wrapper(*args, **kwargs):
-            result = function(*args, **kwargs)
-            return result
-        return wrapper
-
-    def balance_decorator(self, function):
-        def wrapper(*args, **kwargs):
-            result = function(*args, **kwargs)
-            return result
-        return wrapper
-
-    def sale_decorator(self, function):
-        def wrapper(*args, **kwargs):
-            result = function(*args, **kwargs)
-            return result
-        return wrapper
-
-    def review(self, function):
-        def wrapper(*args, **kwargs):
-            result = function(*args, **kwargs)
-            return result
-        return wrapper
+    def execute(self, name, inventory, balance, history):
+        if name not in self.actions:
+            print(f"Error: {name} not in actions")
+        else:
+            return self.actions[name](inventory, balance, history)
 
 
-balance = 0
-warehouse = {}
-history = []
+def load_warehouse():
+    if not os.path.exists("warehouse.json"):
+        return {}
+    with open("warehouse.json") as f:
+        warehouse = json.load(f)
+    return warehouse
+
+
+def save_warehouse(warehouse):
+    with open("warehouse.json", "w") as f:
+        json.dump(warehouse, f)
+
+
+def load_history():
+    if not os.path.exists("history.json"):
+        return []
+    with open("history.json") as f:
+        history = json.load(f)
+    return history
+
+
+def save_history(history):
+    with open("history.json", "w") as f:
+        json.dump(history, f)
+
+
+def load_balance():
+    if not os.path.exists("balance.json"):
+        return 0
+    with open("balance.json") as f:
+        balance = json.load(f)
+    return balance
+
+
+def save_balance(balance):
+    with open("balance.json", "w") as f:
+        json.dump(balance, f)
+
+
+balance = load_balance()
+warehouse = load_warehouse()
+history = load_history()
+manager = Manager()
+
+
+@manager.assign("balance")
+def perform_balance(balance, history, warehouse):
+    actions = input("add or subtract): ")
+    value = int(input("Value: "))
+    if actions == "add":
+        balance += value
+    elif actions == "subtract":
+        if balance - value < 0:
+            print("No money can be subtracted")
+            return balance, history, warehouse
+        balance -= value
+        history.append(f"action: balance, cmd: {actions}, {value}")
+
+        return balance, history, warehouse
+
+
+@manager.assign("sale")
+def perform_history(balance, history, warehouse):
+    product_name = input("Enter the products name: ")
+    price = int(input("Enter the price: "))
+    quantity = int(input("Enter the quantity sold: "))
+    if product_name in warehouse:
+        if quantity <= warehouse[product_name]:
+            total_price = price * quantity
+            balance += total_price
+            warehouse[product_name] -= quantity
+            print(f"Products sold:{product_name},Quantity:{quantity}")
+            history.append(product_name)
+    else:
+        print("Product not found in the warehouse or the quantity is not enough")
+
+        return balance, history, warehouse
+
+
+@manager.assign("purchase")
+def perform_warehouse(balance, history, warehouse):
+    product_name = input("Enter the name of the product: ")
+    price = int(input("Enter the price: "))
+    quantity = int(input("Enter the quantity: "))
+    total_price = price * quantity
+    if total_price > balance:
+        print("You have to low balance in your account")
+        balance -= total_price
+        print(f"You purchase {product_name}{quantity} items for {total_price}")
+        if product_name not in warehouse:
+            warehouse[product_name] = 0
+            warehouse[product_name] += quantity
+            history.append(product_name)
+
+            return balance, history, warehouse
+
+
+@manager.assign("sale")
+def perform_sale(balance, history, warehouse):
+    product_name = input("Enter the products name: ")
+    price = int(input("Enter the price: "))
+    quantity = int(input("Enter the quantity sold: "))
+    if product_name in warehouse:
+        if quantity <= warehouse[product_name]:
+            total_price = price * quantity
+            balance += total_price
+            warehouse[product_name] -= quantity
+            print(f"Products sold:{product_name},Quantity:{quantity}")
+            history.append(product_name)
+    else:
+        print("Product not found in the warehouse or the quantity is not enough")
+
+        return balance, history, warehouse
+
+
+@manager.assign("account")
+def perform_account(balance, history, warehouse):
+    print(f"Current account balance is: {balance} ")
+
+    return balance, history, warehouse
+
+
+@manager.assign("account")
+def perform_warehouse_list(balance, history, warehouse):
+    for product_name, quantity in warehouse.items():
+        print(f"{product_name}: {quantity}")
+
+    return balance, history, warehouse
+
+
+@manager.assign("warehouse")
+def perform_warehouse(balance, history, warehouse):
+    product_name = input("Enter the products name: ")
+    if product_name in warehouse:
+        print(f"{product_name} is available at the warehouse: {warehouse[product_name]}")
+    else:
+        print(f"The product name you are looking for are not in the warehouse")
+
+        return balance, history, warehouse
+
+
+@manager.assign("review")
+def perform_review(balance, history, warehouse):
+    first_index = int(input("Enter the first index: "))
+    second_index = int(input("Enter the second index: "))
+    for entry in history[first_index:second_index]:
+        print(entry)
+    else:
+        print(f"The command are not supported {action}. Please select another command.")
+
+        return balance, history, warehouse
+
 
 commands_list_msg = """Select a command: 
 - balance: add or subtract from the account
@@ -71,71 +196,26 @@ while True:
 
     elif action == "balance":
         print(commands_add_sub_msg)
-        action = input("Select a command: ")
-        if action == "add":
-            amount = int(input("Enter the amount to add to the balance: "))
-            balance += amount
-            print("The amount have been added to the balance")
-            history.append(balance)
-        elif action == "subtract":
-            sub = int(input("Enter the amount to subtract: "))
-            balance -= sub
-            if balance < 0:
-                print("The action is not possible")
-                balance += sub
-            elif sub <= 0:
-                print("The action is not possible")
-            else:
-                print("The amount have been subtracted to the balance")
-                history.append(balance)
+        balance, history, warehouse = manager.execute("balance", balance, warehouse, history)
 
     elif action == "sale":
-        product_name = input("Enter the products name: ")
-        price = int(input("Enter the price: "))
-        quantity = int(input("Enter the quantity sold: "))
-        if product_name in warehouse:
-            if quantity <= warehouse[product_name]:
-                total_price = price * quantity
-                balance += total_price
-                warehouse[product_name] -= quantity
-                print(f"Products sold:{product_name},Quantity:{quantity}")
-                history.append(product_name)
-        else:
-            print("Product not found in the warehouse or the quantity is not enough")
+        balance, history, warehouse = manager.execute("sale", balance, warehouse, history)
 
     elif action == "purchase":
-        product_name = input("Enter the name of the product: ")
-        price = int(input("Enter the price: "))
-        quantity = int(input("Enter the quantity: "))
-        total_price = price * quantity
-        if total_price > balance:
-            print("You have to low balance in your account")
-            continue
-        balance -= total_price
-        print(f"You purchase {product_name}{quantity} items for {total_price}")
-        if product_name not in warehouse:
-            warehouse[product_name] = 0
-        warehouse[product_name] += quantity
-        history.append(product_name)
+        balance, history, warehouse = manager.execute("purchase", balance, warehouse, history)
 
     elif action == "account":
-        print(f"Current account balance is: {balance} ")
+        balance, history, warehouse = manager.execute("account", balance, warehouse, history)
 
     elif action == "warehouse_list":
-        for product_name, quantity in warehouse.items():
-            print(f"{product_name}: {quantity}")
+        balance, history, warehouse = manager.execute("warehouse_list", balance, warehouse, history)
 
     elif action == "warehouse":
-        product_name = input("Enter the products name: ")
-        if product_name in warehouse:
-            print(f"{product_name} is available at the warehouse: {warehouse[product_name]}")
-        else:
-            print(f"The product name you are looking for are not in the warehouse")
+        balance, history, warehouse = manager.execute("warehouse", balance, warehouse, history)
 
     elif action == "review":
-        first_index = int(input("Enter the first index: "))
-        second_index = int(input("Enter the second index: "))
-        for entry in history[first_index:second_index]:
-            print(entry)
-    else:
-        print(f"The command are not supported {action}. Please select another command.")
+        balance, history, warehouse = manager.execute("review", balance, warehouse, history)
+
+save_balance(balance)
+save_history(history)
+save_warehouse(warehouse)
